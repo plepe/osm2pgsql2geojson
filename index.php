@@ -26,35 +26,37 @@ if(!isset($_REQUEST['qry'])) {
   exit(1);
 }
 //$qry = parse_query($_REQUEST['qry']);
-$qry = "tags @> 'highway=>primary'";
+$qry = array("line"=>"tags @> 'highway=>primary'", "point"=>"tags @> 'amenity=>bar'");
 
 Header("Content-type: application/json; charset=utf8");
 
 print "{ \"type\": \"FeatureCollection\",\n";
 print "  \"features\": [\n";
 
-$res = pg_query($db['conn'], 
-  "select ".
-  "  (CASE WHEN osm_id<0 THEN 'r' || (-osm_id) ELSE 'w' || osm_id END) as id, ".
-  "  ST_AsGeoJSON(ST_Transform(way, 4326)) as geo, ".
-  "  json_encode(tags) as tags ".
-  "from planet_osm_line ".
-  "where ".
-  "  way && ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_Point($bbox[0], $bbox[1]), ST_Point($bbox[2], $bbox[3])), 4326), 900913) and ".
-  "  $qry");
+foreach($qry as $table=>$q) {
+  $res = pg_query($db['conn'], 
+    "select ".
+    "  (CASE WHEN osm_id<0 THEN 'r' || (-osm_id) ELSE 'w' || osm_id END) as id, ".
+    "  ST_AsGeoJSON(ST_Transform(way, 4326)) as geo, ".
+    "  json_encode(tags) as tags ".
+    "from planet_osm_{$table} ".
+    "where ".
+    "  way && ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_Point($bbox[0], $bbox[1]), ST_Point($bbox[2], $bbox[3])), 4326), 900913) and ".
+    "  $q");
 
-$first = true;
-while ($elem = pg_fetch_assoc($res)) {
-  if (!$first)
-    print ",\n";
-  $first = false;
+  $first = true;
+  while ($elem = pg_fetch_assoc($res)) {
+    if (!$first)
+      print ",\n";
+    $first = false;
 
 
-  print "    { \"type\": \"Feature\",\n";
-  print "      \"id\": \"{$elem['id']}\",\n";
-  print "      \"geometry\": {$elem['geo']},\n";
-  print "      \"properties\": {$elem['tags']},\n";
-  print "    }";
+    print "    { \"type\": \"Feature\",\n";
+    print "      \"id\": \"{$elem['id']}\",\n";
+    print "      \"geometry\": {$elem['geo']},\n";
+    print "      \"properties\": {$elem['tags']},\n";
+    print "    }";
+  }
 }
 
 print "\n  ]\n}\n";
