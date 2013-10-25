@@ -1,0 +1,8 @@
+<?
+# copy this file to conf.php and change to your database configuration
+$db=array(
+  'db'		=>"database",
+  'user'	=>"user",
+  'password'	=>"password",
+  'host'	=>"localhost",
+);
