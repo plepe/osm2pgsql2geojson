@@ -1,0 +1,4 @@
+osm2pgsql2geojson is a frontend for an osm2pgsql database (with hstore-all column) and serves custom selected parts as GeoJSON file. There are a couple of parameters to select the part of the world you need :-)
+
+* bbox=14.0,47.4,14.2,47.5
+* qry=point[amenity=bar];line[highway=residential][cycleway^=opposite]
