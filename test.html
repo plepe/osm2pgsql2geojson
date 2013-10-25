@@ -8,6 +8,9 @@
   <script src="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.js"></script>
 </head>
 <body>
+<form onSubmit='request_geojson(); return false;'>
+<input id='qry' value='node[amenity=bar];way[highway=primary]' style='width: 640px'/>
+</form>
 <div id='map' style='width: 640px; height: 480px;'></div>
 <script>
 // create a map in the "map" div, set the view to a given place and zoom
@@ -29,7 +32,7 @@ function request_geojson() {
   var param = [];
 
   param.push("bbox=" + map.getBounds().toBBoxString());
-  param.push("qry=" + "test");
+  param.push("qry=" + encodeURIComponent(document.getElementById("qry").value));
 
   param = param.join("&");
 
