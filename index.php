@@ -33,6 +33,7 @@ Header("Content-type: application/json; charset=utf8");
 print "{ \"type\": \"FeatureCollection\",\n";
 print "  \"features\": [\n";
 
+$first = true;
 foreach($qry as $table=>$q) {
   $res = pg_query($db['conn'], 
     "select ".
@@ -44,17 +45,15 @@ foreach($qry as $table=>$q) {
     "  way && ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_Point($bbox[0], $bbox[1]), ST_Point($bbox[2], $bbox[3])), 4326), 900913) and ".
     "  $q");
 
-  $first = true;
   while ($elem = pg_fetch_assoc($res)) {
     if (!$first)
       print ",\n";
     $first = false;
 
-
     print "    { \"type\": \"Feature\",\n";
     print "      \"id\": \"{$elem['id']}\",\n";
     print "      \"geometry\": {$elem['geo']},\n";
-    print "      \"properties\": {$elem['tags']},\n";
+    print "      \"properties\": {$elem['tags']}\n";
     print "    }";
   }
 }
