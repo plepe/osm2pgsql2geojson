@@ -2,6 +2,7 @@
 require "conf.php";
 require "inc/parse_selectors.php";
 require "inc/compile_selectors.php";
+require "inc/functions.php";
 
 $db['conn'] = pg_connect("dbname={$db['db']} host={$db['host']} user={$db['user']} password={$db['password']}");
 
@@ -35,29 +36,76 @@ Header("Content-type: application/json; charset=utf8");
 print "{ \"type\": \"FeatureCollection\",\n";
 print "  \"features\": [\n";
 
-$first = true;
-foreach($qry as $table=>$q) {
-  $res = pg_query($db['conn'], 
+$where_bbox = "way && ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_Point($bbox[0], $bbox[1]), ST_Point($bbox[2], $bbox[3])), 4326), 900913)";
+
+// planet_osm_point
+$next_qry = get_queries($qry, array("*", "node", "point"));
+if(sizeof($next_qry)) {
+  $res = pg_query($db['conn'],
     "select ".
-    "  (CASE WHEN osm_id<0 THEN 'r' || (-osm_id) ELSE 'w' || osm_id END) as id, ".
+    "  'n' || osm_id as id, ".
     "  ST_AsGeoJSON(ST_Transform(way, 4326)) as geo, ".
     "  json_encode(tags) as tags ".
-    "from planet_osm_{$table} ".
-    "where ".
-    "  way && ST_Transform(ST_SetSRID(ST_MakeBox2D(ST_Point($bbox[0], $bbox[1]), ST_Point($bbox[2], $bbox[3])), 4326), 900913) and ".
-    "  $q");
+    "from planet_osm_point ".
+    "where $where_bbox and $next_qry");
 
-  while ($elem = pg_fetch_assoc($res)) {
-    if (!$first)
-      print ",\n";
-    $first = false;
+  print_results($res);
+}
 
-    print "    { \"type\": \"Feature\",\n";
-    print "      \"id\": \"{$elem['id']}\",\n";
-    print "      \"geometry\": {$elem['geo']},\n";
-    print "      \"properties\": {$elem['tags']}\n";
-    print "    }";
-  }
+// planet_osm_line - ways
+$next_qry = get_queries($qry, array("*", "line", "way"));
+if(sizeof($next_qry)) {
+  $res = pg_query($db['conn'],
+    "select ".
+    "  'w' || osm_id as id, ".
+    "  ST_AsGeoJSON(ST_Transform(way, 4326)) as geo, ".
+    "  json_encode(tags) as tags ".
+    "from planet_osm_line ".
+    "where osm_id > 0 and $where_bbox and $next_qry");
+
+  print_results($res);
+}
+
+// planet_osm_line - relations
+$next_qry = get_queries($qry, array("*", "line", "relation"));
+if(sizeof($next_qry)) {
+  $res = pg_query($db['conn'],
+    "select ".
+    "  'r' || (-osm_id) as id, ".
+    "  ST_AsGeoJSON(ST_Transform(way, 4326)) as geo, ".
+    "  json_encode(tags) as tags ".
+    "from planet_osm_line ".
+    "where osm_id < 0 and $where_bbox and $next_qry");
+
+  print_results($res);
+}
+
+// planet_osm_polygon - ways
+$next_qry = get_queries($qry, array("*", "area", "way"));
+if(sizeof($next_qry)) {
+  $res = pg_query($db['conn'],
+    "select ".
+    "  'w' || osm_id as id, ".
+    "  ST_AsGeoJSON(ST_Transform(way, 4326)) as geo, ".
+    "  json_encode(tags) as tags ".
+    "from planet_osm_polygon ".
+    "where osm_id > 0 and $where_bbox and $next_qry");
+
+  print_results($res);
+}
+
+// planet_osm_polygon - relations
+$next_qry = get_queries($qry, array("*", "area", "relation"));
+if(sizeof($next_qry)) {
+  $res = pg_query($db['conn'],
+    "select ".
+    "  'r' || (-osm_id) as id, ".
+    "  ST_AsGeoJSON(ST_Transform(way, 4326)) as geo, ".
+    "  json_encode(tags) as tags ".
+    "from planet_osm_polygon ".
+    "where osm_id < 0 and $where_bbox and $next_qry");
+
+  print_results($res);
 }
 
 print "\n  ]\n}\n";
