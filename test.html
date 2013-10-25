@@ -1,0 +1,60 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.css" />
+  <!--[if lte IE 8]>
+      <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.ie.css" />
+  <![endif]-->
+  <script src="http://cdn.leafletjs.com/leaflet-0.6.4/leaflet.js"></script>
+</head>
+<body>
+<div id='map' style='width: 640px; height: 480px;'></div>
+<script>
+// create a map in the "map" div, set the view to a given place and zoom
+var map = L.map('map').setView([47.505, 15.00], 13);
+
+// add an OpenStreetMap tile layer
+L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+// add an empty GeoJSON layer
+var geojsonlayer;
+
+function onEachFeature(feature, layer) {
+  layer.bindPopup("<pre>" + JSON.stringify(feature.properties, null, "  ") + "</pre>");
+}
+
+function request_geojson() {
+  var param = [];
+
+  param.push("bbox=" + map.getBounds().toBBoxString());
+  param.push("qry=" + "test");
+
+  param = param.join("&");
+
+  var request = new XMLHttpRequest();
+  request.onreadystatechange = function() {
+    if ((request.readyState == 4) &&
+        (request.status == 200)) {
+      var items = JSON.parse(request.responseText);
+
+      if (geojsonlayer)
+	map.removeLayer(geojsonlayer);
+
+      geojsonlayer = L.geoJson(items, {
+	onEachFeature: onEachFeature
+      });
+      geojsonlayer.addTo(map);
+    }
+  }
+
+  request.open("GET", ".?"+param, true);
+  request.send(null);
+}
+
+map.on('moveend', request_geojson);
+</script>
+</body>
+</html>
+
