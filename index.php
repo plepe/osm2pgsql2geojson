@@ -1,5 +1,7 @@
 <?
 require "conf.php";
+require "inc/parse_selectors.php";
+require "inc/compile_selectors.php";
 
 $db['conn'] = pg_connect("dbname={$db['db']} host={$db['host']} user={$db['user']} password={$db['password']}");
 
@@ -25,8 +27,8 @@ if(!isset($_REQUEST['qry'])) {
   print "no qry given";
   exit(1);
 }
-//$qry = parse_query($_REQUEST['qry']);
-$qry = array("line"=>"tags @> 'highway=>primary'", "point"=>"tags @> 'amenity=>bar'");
+$qry = parse_selectors($_REQUEST['qry']);
+$qry = compile_selectors($qry);
 
 Header("Content-type: application/json; charset=utf8");
 
